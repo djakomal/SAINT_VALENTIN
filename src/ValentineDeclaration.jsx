@@ -16,7 +16,7 @@ export default function ValentineDeclaration() {
   const [powerUps, setPowerUps] = useState([]);
   const [activePowerUp, setActivePowerUp] = useState(null);
   const [multiplier, setMultiplier] = useState(1);
-  const [goldenHeart, setGoldenHeart] = useState(null);
+//   const [goldenHeart, setGoldenHeart] = useState(null);
   const [level, setLevel] = useState(1);
   const [achievements, setAchievements] = useState([]);
   const [explosions, setExplosions] = useState([]);
@@ -219,12 +219,15 @@ export default function ValentineDeclaration() {
       case 'magnet':
         addAchievement('🧲 Aimant activé!');
         // Auto-catch nearby hearts
-        activeHearts.slice(0, 5).forEach(heart => {
-          setTimeout(() => {
-            setActiveHearts(prev => prev.filter(h => h.id !== heart.id));
-            setScore(prev => prev + heart.points);
-          }, 200);
-        });
+        const heartsToCatch = activeHearts.slice(0, 5);
+
+        heartsToCatch.forEach(heart => {
+            setTimeout(() => {
+              setActiveHearts(prev => prev.filter(h => h.id !== heart.id));
+              setScore(prev => prev + heart.points);
+            }, 200);
+          });
+        default:
         break;
       case 'bonus':
         setScore(prev => prev + 20);
