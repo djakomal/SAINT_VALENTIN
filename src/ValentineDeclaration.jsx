@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Heart, Sparkles, Gift, Star, Zap, Trophy, Target, Flame } from 'lucide-react';
 import './ValentineDeclaration.css';
 
@@ -20,6 +20,17 @@ export default function ValentineDeclaration() {
   const [achievements, setAchievements] = useState([]);
   const [explosions, setExplosions] = useState([]);
   const comboTimerRef = useRef(null);
+
+  // Define endGame with useCallback FIRST, before any useEffect that uses it
+  const endGame = useCallback(() => {
+    if (score > 100) addAchievement('🏆 Score Exceptionnel!');
+    if (combo > 10) addAchievement('🌟 Maître du Combo!');
+  
+    setTimeout(() => {
+      setGameComplete(true);
+      setGameStarted(false);
+    }, 2000);
+  }, [score, combo]); // Add dependencies here
 
   useEffect(() => {
     const heartArray = Array.from({ length: 30 }, (_, i) => ({
@@ -54,27 +65,35 @@ export default function ValentineDeclaration() {
     }
   }, [particles]);
 
-  // Game timer with level progression
+  // Game timer with level progression - FIXED
   useEffect(() => {
     if (gameStarted && !gameComplete && timeLeft > 0) {
       const timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
-        // Increase difficulty every 10 seconds
-        if (timeLeft % 10 === 0 && timeLeft !== 30) {
-          setLevel(prev => prev + 1);
-          addAchievement(`🎯 Niveau ${level + 1} atteint!`);
-        }
+        setTimeLeft(prevTime => {
+          const newTime = prevTime - 1;
+          
+          // Increase difficulty every 10 seconds
+          if (newTime > 0 && newTime % 10 === 0 && newTime !== 30) {
+            setLevel(prev => {
+              const newLevel = prev + 1;
+              addAchievement(`🎯 Niveau ${newLevel} atteint!`);
+              return newLevel;
+            });
+          }
+          
+          return newTime;
+        });
       }, 1000);
       return () => clearTimeout(timer);
     } else if (timeLeft === 0 && gameStarted && !gameComplete) {
       endGame();
     }
-  }, [timeLeft, gameStarted, gameComplete, level]);
+  }, [timeLeft, gameStarted, gameComplete, endGame]);
 
-  // Spawn hearts with increasing difficulty
+  // Spawn hearts with increasing difficulty - FIXED (removed endGame from dependencies)
   useEffect(() => {
     if (gameStarted && !gameComplete) {
-      const spawnRate = Math.max(400, 800 - (level * 100)); // Faster at higher levels
+      const spawnRate = Math.max(400, 800 - (level * 100));
       const interval = setInterval(() => {
         const heartType = Math.random();
         const newHeart = {
@@ -82,10 +101,10 @@ export default function ValentineDeclaration() {
           x: Math.random() * 80 + 10,
           y: Math.random() * 70 + 10,
           size: 35 + Math.random() * 25,
-          color: heartType > 0.95 ? '#ffd700' : // Golden heart (5%)
-                 heartType > 0.85 ? '#ff1493' : // Hot pink (10%)
-                 heartType > 0.6 ? '#ff69b4' : // Pink (25%)
-                 '#ff6b9d', // Default (60%)
+          color: heartType > 0.95 ? '#ffd700' : 
+                 heartType > 0.85 ? '#ff1493' : 
+                 heartType > 0.6 ? '#ff69b4' : 
+                 '#ff6b9d',
           type: heartType > 0.95 ? 'golden' : 
                 heartType > 0.85 ? 'special' : 'normal',
           points: heartType > 0.95 ? 10 : heartType > 0.85 ? 3 : 1
@@ -105,7 +124,7 @@ export default function ValentineDeclaration() {
   useEffect(() => {
     if (gameStarted && !gameComplete) {
       const powerUpInterval = setInterval(() => {
-        if (Math.random() > 0.7) { // 30% chance every 5 seconds
+        if (Math.random() > 0.7) {
           const types = ['2x', 'freeze', 'magnet', 'bonus'];
           const type = types[Math.floor(Math.random() * types.length)];
           const newPowerUp = {
@@ -126,16 +145,36 @@ export default function ValentineDeclaration() {
     }
   }, [gameStarted, gameComplete]);
 
-  // Power-up effects timer
+  // Remove the duplicate timer effect - I'm keeping the first one and removing this one
+  // This entire useEffect was duplicated, so I'm commenting it out
+  /*
   useEffect(() => {
-    if (activePowerUp) {
-      const timer = setTimeout(() => {
-        setActivePowerUp(null);
-        setMultiplier(1);
-      }, 5000);
-      return () => clearTimeout(timer);
+    if (!gameStarted || gameComplete) return;
+  
+    if (timeLeft <= 0) {
+      endGame();
+      return;
     }
-  }, [activePowerUp]);
+  
+    const timer = setTimeout(() => {
+      setTimeLeft(prev => {
+        const newTime = prev - 1;
+  
+        if (newTime > 0 && newTime % 10 === 0) {
+          setLevel(lvl => {
+            const newLevel = lvl + 1;
+            addAchievement(`🎯 Niveau ${newLevel} atteint!`);
+            return newLevel;
+          });
+        }
+  
+        return newTime;
+      });
+    }, 1000);
+  
+    return () => clearTimeout(timer);
+  }, [gameStarted, gameComplete, timeLeft, endGame]);
+  */
 
   const startGame = () => {
     setGameStarted(true);
@@ -148,10 +187,11 @@ export default function ValentineDeclaration() {
     setActivePowerUp(null);
     setMultiplier(1);
     setAchievements([]);
+    setExplosions([]);
   };
 
   const createExplosion = (x, y, color) => {
-    const explosion = { id: Date.now(), x, y, color };
+    const explosion = { id: Date.now() + Math.random(), x, y, color };
     setExplosions(prev => [...prev, explosion]);
     setTimeout(() => {
       setExplosions(prev => prev.filter(e => e.id !== explosion.id));
@@ -164,7 +204,6 @@ export default function ValentineDeclaration() {
     setCombo(prev => {
       const newCombo = prev + 1;
       
-      // Achievements
       if (newCombo === 5) addAchievement('🔥 Combo x5!');
       if (newCombo === 10) addAchievement('⚡ Combo x10! Incroyable!');
       if (newCombo === 15) addAchievement('💫 Combo x15! LÉGENDAIRE!');
@@ -174,10 +213,8 @@ export default function ValentineDeclaration() {
     
     setActiveHearts(prev => prev.filter(h => h.id !== heart.id));
     
-    // Visual feedback
     createExplosion(x, y, heart.color);
     
-    // Create particle burst
     for (let i = 0; i < (heart.type === 'golden' ? 20 : 10); i++) {
       setParticles(prev => [...prev, {
         id: Date.now() + i + Math.random(),
@@ -188,13 +225,11 @@ export default function ValentineDeclaration() {
       }]);
     }
 
-    // Special heart effects
     if (heart.type === 'golden') {
       addAchievement('⭐ Cœur d\'or attrapé! +10 points!');
-      setTimeLeft(prev => prev + 3); // Bonus time
+      setTimeLeft(prev => prev + 3);
     }
 
-    // Reset combo timer
     if (comboTimerRef.current) clearTimeout(comboTimerRef.current);
     comboTimerRef.current = setTimeout(() => {
       setCombo(0);
@@ -210,6 +245,7 @@ export default function ValentineDeclaration() {
       case '2x':
         setMultiplier(2);
         addAchievement('⚡ Double Points activé!');
+        setTimeout(() => setMultiplier(1), 5000);
         break;
       case 'freeze':
         setTimeLeft(prev => prev + 5);
@@ -217,41 +253,27 @@ export default function ValentineDeclaration() {
         break;
       case 'magnet':
         addAchievement('🧲 Aimant activé!');
-        // Auto-catch nearby hearts
-        const heartsToCatch = activeHearts.slice(0, 5);
-
+        const heartsToCatch = [...activeHearts].slice(0, 5);
         heartsToCatch.forEach(heart => {
-            setTimeout(() => {
-              setActiveHearts(prev => prev.filter(h => h.id !== heart.id));
-              setScore(prev => prev + heart.points);
-            }, 200);
-          });
-        default:
+          setActiveHearts(prev => prev.filter(h => h.id !== heart.id));
+          setScore(prev => prev + heart.points);
+        });
         break;
       case 'bonus':
         setScore(prev => prev + 20);
         addAchievement('💰 +20 points bonus!');
         break;
+      default:
+        break;
     }
   };
 
   const addAchievement = (text) => {
-    const achievement = { id: Date.now(), text };
+    const achievement = { id: Date.now() + Math.random(), text };
     setAchievements(prev => [...prev, achievement]);
     setTimeout(() => {
       setAchievements(prev => prev.filter(a => a.id !== achievement.id));
     }, 3000);
-  };
-
-  const endGame = () => {
-    // Final achievements
-    if (score > 100) addAchievement('🏆 Score Exceptionnel!');
-    if (combo > 10) addAchievement('🌟 Maître du Combo!');
-    
-    setTimeout(() => {
-      setGameComplete(true);
-      setGameStarted(false);
-    }, 2000);
   };
 
   const getRank = () => {
@@ -264,8 +286,6 @@ export default function ValentineDeclaration() {
 
   return (
     <div className="valentine-container">
-
-
       {/* Custom cursor */}
       <div 
         className="custom-cursor" 
@@ -383,7 +403,6 @@ export default function ValentineDeclaration() {
               </div>
               
               <div className="game-area">
-                {/* Hearts */}
                 {activeHearts.map(heart => (
                   <div
                     key={heart.id}
@@ -402,7 +421,6 @@ export default function ValentineDeclaration() {
                   </div>
                 ))}
 
-                {/* Power-ups */}
                 {powerUps.map(powerUp => (
                   <div
                     key={powerUp.id}
@@ -423,7 +441,6 @@ export default function ValentineDeclaration() {
                   </div>
                 ))}
 
-                {/* Explosions */}
                 {explosions.map(explosion => (
                   <div
                     key={explosion.id}
@@ -508,7 +525,7 @@ export default function ValentineDeclaration() {
 
               <p className="love-text">
                 <strong>🎁 Ton Cadeau Spécial :</strong><br/>
-                 Un bijou gravé avec nos initiales
+                Un bijou gravé avec nos initiales
               </p>
               
               <p className="signature">
