@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Heart, Sparkles, Gift, Star, Music, Zap, Trophy, Target, Flame } from 'lucide-react';
+import { Heart, Sparkles, Gift, Star, Zap, Trophy, Target, Flame } from 'lucide-react';
 import './ValentineDeclaration.css';
 
 export default function ValentineDeclaration() {
