@@ -16,7 +16,6 @@ export default function ValentineDeclaration() {
   const [powerUps, setPowerUps] = useState([]);
   const [activePowerUp, setActivePowerUp] = useState(null);
   const [multiplier, setMultiplier] = useState(1);
-//   const [goldenHeart, setGoldenHeart] = useState(null);
   const [level, setLevel] = useState(1);
   const [achievements, setAchievements] = useState([]);
   const [explosions, setExplosions] = useState([]);
